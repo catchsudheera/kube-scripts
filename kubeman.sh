@@ -1,4 +1,6 @@
 #!/bin/bash
+# author : Sudheera Palihakkara <catchsudheera@gmail.com>
+# version : 1.0
 
 if [ "$1" == "-h" ]; then
 	echo "Usage: `basename $0` [your pod name regex]"
