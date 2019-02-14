@@ -54,33 +54,13 @@ fi
 selectedName=${numbers[$selectedIdx]}
 echo "selected" $selectedIdx $selectedName
 echo ""
-echo "Redeploy pod $selectedName y/n ?"
+echo "Delete pod $selectedName y/n ?"
 read input_variable
 if [ "$input_variable" = "y" ]; then
 	echo "deleting pod : $selectedName" 
 	kubectl delete pod/$selectedName
 	sleep 4
-fi
 
-for i in {2..4}
-do
-	simpleName=`echo $selectedName | rev | cut -d"-" -f$i-  | rev`
-	echo $simpleName
-	if [ -z "$simpleName" ]; then 
-		echo "Could not find the new pod name for $selectedName"
-		exit 1
-	fi
-	newPodLine=`kubectl get pods | grep $simpleName | grep "[Running,ContainerCreating]" | head -n 1`
-	if [ -n "$newPodLine" ]; then
-		newPodName=`echo $newPodLine | awk  {'print $1'}`
-		echo ""
-		newName=`kubectl get pods | grep $newPodName | grep "[Running,ContainerCreating]" | awk  {'print $1'}`
-		echo "New pod for $simpleName ==> $newName"
-		break;
-	fi
-done
-
-if [ -n "$newPodName" ]; then
 	while [[ true ]]; do
 		newList=( $(kubectl get pods | grep $1 | grep Running| awk  {'print $1'}) )
 		for (( i=0; i<${#newList[@]}; i++ )); do echo "[$i] - "${newList[i]}; done
@@ -97,10 +77,10 @@ if [ -n "$newPodName" ]; then
 		newName=`echo ${newList[$newIdx]} | awk  {'print $1'}`
 		break
 	done
-
-
-
+else
+	newName=$selectedName
 fi
+
 arr=( $(kubectl get pods $newName -o jsonpath='{.spec.containers[*].name}') )
 
 if [ "${#arr}" -eq 0 ]; then
