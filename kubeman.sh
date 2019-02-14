@@ -18,6 +18,11 @@ if [ "$1" == "-h" ]; then
   exit 0
 fi
 
+if [[ $# -eq 0 ]] ; then
+    echo 'Invalid number of arguments. Run with "-h" option for help'
+    exit 0
+fi
+
 numbers=( $(kubectl get pods | grep $1 | grep Running| awk  {'print $1'}) )
 
 re='^[0-9]+$'
