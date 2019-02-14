@@ -32,7 +32,7 @@ if [ "${#numbers}" -eq 0 ]; then
 elif [ "${#numbers[@]}" -eq 1 ]; then
 	selectedIdx=0
 else
-	for (( i=0; i<${#numbers[@]}; i++ )); do echo "[$i]---"${numbers[i]}; done
+	for (( i=0; i<${#numbers[@]}; i++ )); do echo "[$i] - "${numbers[i]}; done
 	echo ""
 	while [[ true ]]; do
 		echo "Enter the number to select pod"
@@ -62,7 +62,7 @@ if [ "$input_variable" = "y" ]; then
 	sleep 4
 fi
 
-for i in {2..10}
+for i in {2..4}
 do
 	simpleName=`echo $selectedName | rev | cut -d"-" -f$i-  | rev`
 	echo $simpleName
@@ -70,18 +70,37 @@ do
 		echo "Could not find the new pod name for $selectedName"
 		exit 1
 	fi
-	newPodLine=`kubectl get pods | grep $simpleName | head -n 1`
+	newPodLine=`kubectl get pods | grep $simpleName | grep "[Running,ContainerCreating]" | head -n 1`
 	if [ -n "$newPodLine" ]; then
+		newPodName=`echo $newPodLine | awk  {'print $1'}`
+		echo ""
+		newName=`kubectl get pods | grep $newPodName | grep "[Running,ContainerCreating]" | awk  {'print $1'}`
+		echo "New pod for $simpleName ==> $newName"
 		break;
 	fi
-
 done
 
-newPodName=`echo $newPodLine | awk  {'print $1'}`
-echo ""
-newName=`kubectl get pods | grep $newPodName | grep "[Running,ContainerCreating]" | awk  {'print $1'}`
-echo "New pod for $newPodName ==> $newName"
+if [ -n "$newPodName" ]; then
+	while [[ true ]]; do
+		newList=( $(kubectl get pods | grep $1 | grep Running| awk  {'print $1'}) )
+		for (( i=0; i<${#newList[@]}; i++ )); do echo "[$i] - "${newList[i]}; done
+		echo ""
+		echo "Enter the pod number to view logs, press enter to refresh"
+		read newIdx
+		if ! [[ $newIdx =~ $re ]] ; then
+		   continue
+		fi
+		if [ $newIdx -ge "${#newList[@]}" ] ; then
+		   continue
+		fi
 
+		newName=`echo ${newList[$newIdx]} | awk  {'print $1'}`
+		break
+	done
+
+
+
+fi
 arr=( $(kubectl get pods $newName -o jsonpath='{.spec.containers[*].name}') )
 
 if [ "${#arr}" -eq 0 ]; then
@@ -90,7 +109,7 @@ if [ "${#arr}" -eq 0 ]; then
 elif [ "${#arr[@]}" -eq 1 ]; then
 	selectedIdx2=0
 else
-	for (( i=0; i<${#arr[@]}; i++ )); do echo "[$i]---"${arr[i]}; done
+	for (( i=0; i<${#arr[@]}; i++ )); do echo "[$i] - "${arr[i]}; done
 	echo ""
 	echo "Enter the container number to view logs"
 	while [[ true ]]; do
