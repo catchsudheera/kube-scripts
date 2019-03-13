@@ -2,6 +2,29 @@
 # author : Sudheera Palihakkara <catchsudheera@gmail.com>
 # version : 1.1
 
+
+# foreground color using ANSI escape
+
+fgBLack=`tput setaf 0` # black
+fgRed=`tput setaf 1` # red
+fgGreen=`tput setaf 2` # green
+fgYellow=`tput setaf 3` # yellow
+fgBlue=`tput setaf 4` # blue
+fgMagenta=`tput setaf 5` # magenta
+fgCyan=`tput setaf 6`
+fgWhite=`tput setaf 7` # white
+
+# text editing options
+
+txBold=`tput bold`   # bold
+txHalf=`tput dim`    # half-bright
+txUnderline=`tput smul`   # underline
+txEndUnder=`tput rmul`   # exit underline
+txReverse=`tput rev`    # reverse
+txStandout=`tput smso`   # standout
+txEndStand=`tput rmso`   # exit standout
+txReset=`tput sgr0`   # reset attributes
+
 if [ "$1" == "-h" ]; then
 	echo "Usage : `basename $0` [OPTION] POD_NAME_REGEX => for pod operation"
 	echo ""
@@ -33,24 +56,24 @@ inputRegex=$1
 if [ "$1" == "-sw" ]; then
 	IFS=', ' read -r -a ctxs <<< `kubectl config view -o jsonpath='{$.contexts[*].name}'`
 	echo ""
-		for (( i=0; i<${#ctxs[@]}; i++ )); do echo "[$i] - "${ctxs[i]}; done
+		for (( i=0; i<${#ctxs[@]}; i++ )); do echo "$fgGreen[$i] - "${ctxs[i]} $txReset; done
 	echo ""
-	echo "Enter the context number to switch : "
 	while [[ true ]]; do
-		read ctxNumber
+		read -p "Enter the context number to switch : " ctxNumber
 		if ! [[ $ctxNumber =~ $re ]] ; then
-		   echo "error: Not a number"
+		   echo "${fgRed}error: Not a number $txReset"
 		   continue
 		fi
 		if [ $ctxNumber -ge "${#ctxs[@]}" ] ; then
-		   echo "error: Index out of range"
+		   echo "${fgRed}error: Index out of range $txReset"
 		   echo ""
 		   continue
 		fi
 		break
 	done
 
-	kubectl config use-context ${ctxs[$ctxNumber]}
+	res=`kubectl config use-context ${ctxs[$ctxNumber]}`
+	echo "${fgYellow}${txBold}$res $txReset"
 	if [[ $# -eq 1 ]] ; then
 		exit 0
 	fi
@@ -65,22 +88,21 @@ echo "Finding pods matching regex \"$inputRegex\" in context : `kubectl config c
 numbers=( $(kubectl get pods | grep $inputRegex | grep Running| awk  {'print $1'}) )
 
 if [ "${#numbers}" -eq 0 ]; then
-    echo "No pods matching regex : $inputRegex"
+    echo "${fgRed}No pods matching regex : $inputRegex $txReset"
     exit 1
 elif [ "${#numbers[@]}" -eq 1 ]; then
 	selectedIdx=0
 else
-	for (( i=0; i<${#numbers[@]}; i++ )); do echo "[$i] - "${numbers[i]}; done
+	for (( i=0; i<${#numbers[@]}; i++ )); do echo "${fgGreen}[$i] - "${numbers[i]} $txReset; done
 	echo ""
 	while [[ true ]]; do
-		echo "Enter the number to select pod"
-		read selectedIdx
+		read -p "Enter the number to select pod : " selectedIdx
 		if ! [[ $selectedIdx =~ $re ]] ; then
-		   echo "error: Not a number"
+		   echo "${fgRed}error: Not a number $txReset"
 		   continue
 		fi
 		if [ $selectedIdx -ge "${#numbers[@]}" ] ; then
-		   echo "error: Index out of range"
+		   echo "${fgRed}error: Index out of range $txReset"
 		   echo ""
 		   continue
 		fi
@@ -90,21 +112,21 @@ else
 fi
 
 selectedName=${numbers[$selectedIdx]}
-echo "selected" $selectedIdx $selectedName
+echo "${txBold}selected" $txGreen $selectedName $txReset
 echo ""
-echo "Delete pod $selectedName y/n ?"
-read input_variable
+read -p "${fgMagenta}Delete pod $selectedName y/n ? : $txReset" input_variable
 if [ "$input_variable" = "y" ]; then
-	echo "deleting pod : $selectedName" 
-	kubectl delete pod/$selectedName
+	echo "${fgBlue}deleting pod : $selectedName $txReset" 
+	res=`kubectl delete pod/$selectedName`
+	echo "${fgYellow}${txBold}$res $txReset"
+	echo ""
 	sleep 4
 
 	while [[ true ]]; do
 		newList=( $(kubectl get pods | grep $inputRegex | grep Running| awk  {'print $1'}) )
-		for (( i=0; i<${#newList[@]}; i++ )); do echo "[$i] - "${newList[i]}; done
+		for (( i=0; i<${#newList[@]}; i++ )); do echo "${fgGreen}[$i] - "${newList[i]} $txReset; done
 		echo ""
-		echo "Enter the pod number to view logs, press enter to refresh"
-		read newIdx
+		read -p "Enter the pod number to view logs or press Enter key to refresh pod list: " newIdx
 		if ! [[ $newIdx =~ $re ]] ; then
 		   continue
 		fi
@@ -122,22 +144,21 @@ fi
 arr=( $(kubectl get pods $newName -o jsonpath='{.spec.containers[*].name}') )
 
 if [ "${#arr}" -eq 0 ]; then
-    echo "No containers in the pod : $newName"
+    echo "${fgRed}No containers in the pod : $newName $txReset"
     exit 1
 elif [ "${#arr[@]}" -eq 1 ]; then
 	selectedIdx2=0
 else
-	for (( i=0; i<${#arr[@]}; i++ )); do echo "[$i] - "${arr[i]}; done
+	for (( i=0; i<${#arr[@]}; i++ )); do echo "${fgGreen}[$i] - "${arr[i]} $txReset; done
 	echo ""
-	echo "Enter the container number to view logs"
 	while [[ true ]]; do
-		read selectedIdx2
+		read -p "Enter the container number to view logs" selectedIdx2
 		if ! [[ $selectedIdx2 =~ $re ]] ; then
-		   echo "error: Not a number"
+		   echo "${fgRed}error: Not a number $txReset"
 		   continue
 		fi
 		if [ $selectedIdx2 -ge "${#arr[@]}" ] ; then
-		   echo "error: Index out of range"
+		   echo "${fgRed}error: Index out of range $txReset"
 		   echo ""
 		   continue
 		fi
