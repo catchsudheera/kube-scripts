@@ -20,3 +20,4 @@ Helper scripts for kubernetes related dev work - Wrapper for ```kubectl```
 * List all the pods matching a regular expression
 * View logs (Even with multiple containers in one pod)
 * Delete a pod and view logs of new pod (no copy-paste of pod id)
+* List and Switch between kube contexts

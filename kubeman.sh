@@ -1,9 +1,12 @@
 #!/bin/bash
 # author : Sudheera Palihakkara <catchsudheera@gmail.com>
-# version : 1.0
+# version : 1.1
 
 if [ "$1" == "-h" ]; then
-	echo "Usage: `basename $0` [your pod name regex]"
+	echo "Usage : `basename $0` [OPTION] POD_NAME_REGEX => for pod operation"
+	echo ""
+	echo "Supported options"		
+	echo "  -sw   :   switch kube context before pod operation" 	
 	echo ""
 	echo "e.g -:"
 	echo " ./kubeman.sh pri"
@@ -15,6 +18,7 @@ if [ "$1" == "-h" ]; then
 	echo " [3]---final-prize-processor-7fbc9f8f95-zh8gj"
 	echo " "
 	echo " Enter the number to select pod"
+	echo "" 
   exit 0
 fi
 
@@ -23,11 +27,45 @@ if [[ $# -eq 0 ]] ; then
     exit 0
 fi
 
-numbers=( $(kubectl get pods | grep $1 | grep Running| awk  {'print $1'}) )
-
 re='^[0-9]+$'
+inputRegex=$1
+
+if [ "$1" == "-sw" ]; then
+	IFS=', ' read -r -a ctxs <<< `kubectl config view -o jsonpath='{$.contexts[*].name}'`
+	echo ""
+		for (( i=0; i<${#ctxs[@]}; i++ )); do echo "[$i] - "${ctxs[i]}; done
+	echo ""
+	echo "Enter the context number to switch : "
+	while [[ true ]]; do
+		read ctxNumber
+		if ! [[ $ctxNumber =~ $re ]] ; then
+		   echo "error: Not a number"
+		   continue
+		fi
+		if [ $ctxNumber -ge "${#ctxs[@]}" ] ; then
+		   echo "error: Index out of range"
+		   echo ""
+		   continue
+		fi
+		break
+	done
+
+	kubectl config use-context ${ctxs[$ctxNumber]}
+	if [[ $# -eq 1 ]] ; then
+		exit 0
+	fi
+
+	if [[ $# -eq 2 ]] ; then
+		inputRegex=$2
+	fi
+fi
+
+echo ""
+echo "Finding pods matching regex \"$inputRegex\" in context : `kubectl config current-context`"
+numbers=( $(kubectl get pods | grep $inputRegex | grep Running| awk  {'print $1'}) )
+
 if [ "${#numbers}" -eq 0 ]; then
-    echo "No pods matching regex : $1"
+    echo "No pods matching regex : $inputRegex"
     exit 1
 elif [ "${#numbers[@]}" -eq 1 ]; then
 	selectedIdx=0
@@ -62,7 +100,7 @@ if [ "$input_variable" = "y" ]; then
 	sleep 4
 
 	while [[ true ]]; do
-		newList=( $(kubectl get pods | grep $1 | grep Running| awk  {'print $1'}) )
+		newList=( $(kubectl get pods | grep $inputRegex | grep Running| awk  {'print $1'}) )
 		for (( i=0; i<${#newList[@]}; i++ )); do echo "[$i] - "${newList[i]}; done
 		echo ""
 		echo "Enter the pod number to view logs, press enter to refresh"
